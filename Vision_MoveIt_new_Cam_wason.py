@@ -35,7 +35,7 @@ from rpi_arm_composites_manufacturing_abb_egm_controller.srv import \
     RapidSetDigitalIO, RapidSetDigitalIORequest, RapidSetDigitalIOResponse, \
     RapidReadEventLog, RapidReadEventLogRequest, RapidReadEventLogResponse
 
-ft_threshold=[250,250,250,250,250,250]
+ft_threshold=[300,300,300,300,300,300]
 
 if __name__ == '__main__':
     print "============ Starting setup"
@@ -66,8 +66,49 @@ if __name__ == '__main__':
     group = moveit_commander.MoveGroupCommander("move_group")
     group.set_goal_position_tolerance(0.04)
     group.allow_replanning(True)
-    group.set_planner_id("RRTConnectkConfigDefault") #RRTConnectkConfigDefault/SBLkConfigDefault/KPIECEkConfigDefault/BKPIECEkConfigDefault/LBKPIECEkConfigDefault/
+    group.set_planner_id("TRRTkConfigDefault") #ProjESTkConfigDefault/TRRTkConfigDefault
     group.set_num_planning_attempts(5)
+
+    '''
+    #Code to automatically add in scene object
+    
+    scene_pose=geometry_msgs.msg.PoseStamped()
+    scene_pose.header.frame_id = "testbed"
+    scene_pose.pose.orientation.z=-1.57
+    scene_pose.pose.position.x=3.6
+    scene_pose.pose.position.y=3.3
+    scene_pose.pose.position.z=0
+    scene_name="testbed"
+    scene.add_mesh(scene_name,scene_pose,'./meshes/testbed_walls/testbed_walls.stl',size=(1,1,1))
+
+    box_pose = geometry_msgs.msg.PoseStamped()
+    box_pose.header.frame_id = "panda_leftfinger"
+    box_pose.pose.orientation.w = 1.0
+    box_name = "box"
+    scene.add_box(box_name, box_pose, size=(1, 1, 1))
+
+
+    start = rospy.get_time()
+    seconds = rospy.get_time()
+    while (seconds - start < 10) and not rospy.is_shutdown():
+  # Test if the box is in attached objects
+	attached_objects = scene.get_attached_objects([scene_name])
+	is_attached = len(attached_objects.keys()) > 0
+
+  # Test if the box is in the scene.
+  # Note that attaching the box will remove it from known_objects
+	is_known = scene_name in scene.get_known_object_names()
+
+  # Test if we are in the expected state
+	if (is_attached):
+	    break
+
+  # Sleep so that we give other threads time on the processor
+	rospy.sleep(0.1)
+	seconds = rospy.get_time()
+    '''
+
+
     display_trajectory_publisher = rospy.Publisher(
                                       '/move_group/display_planned_path',
                                       moveit_msgs.msg.DisplayTrajectory)
@@ -127,7 +168,7 @@ if __name__ == '__main__':
 
         group.set_pose_target(pose_target)
         '''
-        print 'Target:',pose_target
+        print 'Target 1:',pose_target
 
   ## Now, we call the planner to compute the plan
   ## and visualize it if successful
@@ -135,7 +176,7 @@ if __name__ == '__main__':
   ## to actually move the robot
         
         plan1 = group.plan()
-        print plan1
+        #print plan1
         cnt = 0
         while( (not plan1.joint_trajectory.points) and (cnt<3)):
             print "============ Generating plan 1"
@@ -174,7 +215,7 @@ if __name__ == '__main__':
 
         group.set_pose_target(pose_target2)
         
-        print 'Target:',pose_target2
+        print 'Target 2:',pose_target2
 
   ## Now, we call the planner to compute the plan
   ## and visualize it if successful
@@ -208,6 +249,7 @@ if __name__ == '__main__':
         req.lvalue=1
         set_digital_io(req)
         
+        rospy.sleep(1)
         pose_target3 = copy.deepcopy(pose_target)
         pose_target3.position.z += 0.25
 
@@ -222,6 +264,7 @@ if __name__ == '__main__':
         
         plan3 = group.plan()
         cnt = 0
+	#raw_input("Press Enter to continue")  
         while( (not plan3.joint_trajectory.points) and (cnt<3)):
             print "============ Generating plan 3"
             plan3 = group.plan()

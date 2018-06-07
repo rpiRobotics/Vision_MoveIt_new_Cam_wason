@@ -35,46 +35,88 @@ from rpi_arm_composites_manufacturing_abb_egm_controller.srv import \
     RapidSetDigitalIO, RapidSetDigitalIORequest, RapidSetDigitalIOResponse, \
     RapidReadEventLog, RapidReadEventLogRequest, RapidReadEventLogResponse
 
-ft_threshold=[250,250,250,250,250,250]
+class MovementPlan:
+    def __init__(self,move_group,pose_target):
+        self.group=move_group
+	self.pose_target=pose_target
 
-if __name__ == '__main__':
-    print "============ Starting setup"
-    Force_Measurement = 0
-    P,Q = CameraService()
-    '''
-    if(Force_Measurement):
-        if (len(sys.argv) < 2):
-            raise Exception('IP address of ATI Net F/T sensor required')
-        host=sys.argv[1]
-        netft=rpi_ati_net_ft.NET_FT(host)
-        netft.set_tare_from_ft()
-        print netft.try_read_ft_http()
+    def create_plan(self):
 
-        netft.start_streaming()
-        FTtime = []
-        FTread = []
-    '''
-    Robot_Pos = []
-    Robot_Joint = []
-    moveit_commander.roscpp_initialize(sys.argv)
-    rospy.init_node('collision_checker','move_group_python_interface_tutorial',
+    def load_seed_plan(self):
+
+    i
+	
+  
+class VisionMoveIt:
+    def __init__(self):
+	self.ft_threshold=[250,250,250,250,250,250]
+	self.Force_Measurement=0
+	self.pose_target=0
+	#could also be inserted into the starting section of control code for better visibility
+	set_controller_mode=rospy.ServiceProxy('set_controller_mode', SetControllerMode)
+        set_digital_io=rospy.ServiceProxy('rapid/set_digital_io', RapidSetDigitalIO)
+    
+
+    def camera_init(self):
+	self.P,self.Q=CameraService()
+
+    def moveit_init(self):
+	moveit_commander.roscpp_initialize(sys.argv)
+	rospy.init_node('collision_checker','move_group_python_interface_tutorial',
                   anonymous=True)
 
   ## MoveIt! Initialization
-    robot = moveit_commander.RobotCommander()
-    scene = moveit_commander.PlanningSceneInterface()
-    group = moveit_commander.MoveGroupCommander("move_group")
-    group.set_goal_position_tolerance(0.04)
-    group.allow_replanning(True)
-    group.set_planner_id("RRTConnectkConfigDefault") #RRTConnectkConfigDefault/SBLkConfigDefault/KPIECEkConfigDefault/BKPIECEkConfigDefault/LBKPIECEkConfigDefault/
-    group.set_num_planning_attempts(5)
-    display_trajectory_publisher = rospy.Publisher(
+	robot = moveit_commander.RobotCommander()
+	scene = moveit_commander.PlanningSceneInterface()
+        group = moveit_commander.MoveGroupCommander("move_group")
+        group.set_goal_position_tolerance(0.04)
+        group.allow_replanning(True)
+        group.set_planner_id("RRTConnectkConfigDefault") #RRTConnectkConfigDefault/SBLkConfigDefault/KPIECEkConfigDefault/BKPIECEkConfigDefault/LBKPIECEkConfigDefault/
+        group.set_num_planning_attempts(5)
+        display_trajectory_publisher = rospy.Publisher(
                                       '/move_group/display_planned_path',
                                       moveit_msgs.msg.DisplayTrajectory)
+	self.group=group
+
     #ROS service calls to check system variables
-    set_controller_mode=rospy.ServiceProxy('set_controller_mode', SetControllerMode)
-    set_digital_io=rospy.ServiceProxy('rapid/set_digital_io', RapidSetDigitalIO)
-    
+    def generate_plans(self):
+	print "============ Printing robot Pose"
+        print self.group.get_current_pose().pose
+	Q=self.Q
+	P=self.P
+	
+	tic = timeit.default_timer()
+	dt = 0
+	while dt< 3:
+		toc = timeit.default_timer()
+		dt = toc - tic
+
+	print 'Start'
+    	print "============ Printing robot Pose"
+	print group.get_current_pose()  
+	#print robot.get_current_state().joint_state.position
+	print "============ Generating plan 1"
+	pose_target = geometry_msgs.msg.Pose()
+	pose_target.orientation.x = Q[1]
+	pose_target.orientation.y = Q[2]#0.707
+	pose_target.orientation.z = Q[3]#0.707
+	pose_target.orientation.w = Q[0]#qoa[3] #0#0
+	pose_target.position.x = P[0][0]
+	pose_target.position.y = P[0][1]#-2.02630600362
+	pose_target.position.z = P[0][2] + 0.3
+	self.pose_target=pose_target
+	#self.group.set_pose_target(pose_target)
+	
+
+	print "============ Printing robot Pose"
+	print group.get_current_pose()  
+	print "============ Generating plan 2"
+	pose_target2 = copy.deepcopy(pose_target)
+        pose_target2.position.z -= 0.45
+	self.pose_target2=pose_target2
+	
+
+
     req=SetControllerModeRequest()
     req.mode.mode=4
     req.speed_scalar=1
@@ -83,19 +125,13 @@ if __name__ == '__main__':
     res=set_controller_mode(req)
     if (not res.success): raise Exception("Could not set controller mode")
         
-    rospy.sleep(2)
+    #rospy.sleep(2)
 
-    print "============ Printing robot Pose"
-    print group.get_current_pose().pose
+    
 
             
 
-    tic = timeit.default_timer()
-    dt = 0
-    while dt< 3:
-        toc = timeit.default_timer()
-        dt = toc - tic
-    print 'Start'
+    
        
 	
     if (1):
@@ -157,9 +193,7 @@ if __name__ == '__main__':
         res=set_controller_mode(req)
         if (not res.success): raise Exception("Could not set controller mode")
 
-        print "============ Printing robot Pose"
-        print group.get_current_pose()  
-        print "============ Generating plan 2"
+        
         """pose_target = geometry_msgs.msg.Pose()
         pose_target.orientation.x = Q[1]
         pose_target.orientation.y = Q[2]#0.707
@@ -169,8 +203,7 @@ if __name__ == '__main__':
         pose_target.position.y = P[0][1]#-2.02630600362
         pose_target.position.z = P[0][2] + 0.2"""
 
-        pose_target2 = copy.deepcopy(pose_target)
-        pose_target2.position.z -= 0.45
+      
 
         group.set_pose_target(pose_target2)
         
