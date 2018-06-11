@@ -1,6 +1,7 @@
 import rospy
 import moveit_commander
 import moveit_msgs.msg
+import sys
 
 from rpi_arm_composites_manufacturing_abb_egm_controller.srv import \
     SetControllerMode, SetControllerModeRequest, SetControllerModeResponse
@@ -17,8 +18,8 @@ from rpi_arm_composites_manufacturing_abb_egm_controller.srv import \
 class ARMControllerCommander:
     def __init__(self):
 	
-	set_controller_mode=rospy.ServiceProxy('set_controller_mode', SetControllerMode)
-        set_digital_io=rospy.ServiceProxy('rapid/set_digital_io', RapidSetDigitalIO)
+	self.set_controller_mode=rospy.ServiceProxy('set_controller_mode', SetControllerMode)
+        self.set_digital_io=rospy.ServiceProxy('rapid/set_digital_io', RapidSetDigitalIO)
     def move_it_init(self):
 	moveit_commander.roscpp_initialize(sys.argv)
 	rospy.init_node('collision_checker','move_group_python_interface_tutorial',
@@ -42,7 +43,7 @@ class ARMControllerCommander:
     	req.mode.mode=mode
     	req.speed_scalar=speed_scalar
     	req.force_torque_stop_threshold=ft_threshold
-	res=set_controller_mode(req)
+	res=self.set_controller_mode(req)
 	if (not res.success): raise Exception("Could not set controller mode")
 
     def set_vacuum(self,status):
@@ -50,7 +51,7 @@ class ARMControllerCommander:
 	req=RapidSetDigitalIORequest()
         req.signal="Vacuum_enable"
         req.lvalue=status
-        set_digital_io(req)
+        self.set_digital_io(req)
 
 
 

@@ -29,10 +29,10 @@ ft_threshold=[300,300,300,300,300,300]
 if __name__ == '__main__':
     print "============ Starting setup"
     Force_Measurement = 0
-    #P,Q = CameraService()
+    P,Q = CameraService()
    
-    P=np.zeros((1,4))
-    Q=[0,0,0,0]
+ #   P=np.zeros((1,4))
+   # Q=[0,0,0,0]
     '''
     if(Force_Measurement):
         if (len(sys.argv) < 2):
@@ -48,7 +48,7 @@ if __name__ == '__main__':
     '''
     Robot_Pos = []
     Robot_Joint = []
-    armcontroller=ARMControllerCommander()
+    armcontroller=arm_controller_commander.ARMControllerCommander()
     group=armcontroller.move_it_init()
     '''
     #Code to automatically add in scene object
@@ -157,7 +157,7 @@ if __name__ == '__main__':
         print 'Execution Finished.'
         
         ########## Vertical Path ############
-	armcontroller(4,0.4,ft_threshold)
+	armcontroller.set_controller(4,0.4,ft_threshold)
         
 
         print "============ Printing robot Pose"

@@ -10,8 +10,7 @@ import rpi_abb_irc5
 import sys
 import copy
 import rospy
-import moveit_commander
-import moveit_msgs.msg
+import arm_controller_commander
 import geometry_msgs.msg
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import String
@@ -24,17 +23,8 @@ import copy
 import rpi_ati_net_ft
 from CameraService import *
 
-from rpi_arm_composites_manufacturing_abb_egm_controller.srv import \
-    SetControllerMode, SetControllerModeRequest, SetControllerModeResponse
-    
-from rpi_arm_composites_manufacturing_abb_egm_controller.srv import \
-    RapidStart, RapidStartRequest, RapidStartResponse, \
-    RapidStop, RapidStopRequest, RapidStopResponse, \
-    RapidGetStatus, RapidGetStatusRequest, RapidGetStatusResponse, \
-    RapidGetDigitalIO, RapidGetDigitalIORequest, RapidGetDigitalIOResponse, \
-    RapidSetDigitalIO, RapidSetDigitalIORequest, RapidSetDigitalIOResponse, \
-    RapidReadEventLog, RapidReadEventLogRequest, RapidReadEventLogResponse
 
+'''
 class MovementPlan:
     def __init__(self,move_group,pose_target):
         self.group=move_group
@@ -44,8 +34,8 @@ class MovementPlan:
 
     def load_seed_plan(self):
 
-    i
-	
+    
+'''	
   
 class VisionMoveIt:
     def __init__(self):
@@ -53,30 +43,16 @@ class VisionMoveIt:
 	self.Force_Measurement=0
 	self.pose_target=0
 	#could also be inserted into the starting section of control code for better visibility
-	set_controller_mode=rospy.ServiceProxy('set_controller_mode', SetControllerMode)
-        set_digital_io=rospy.ServiceProxy('rapid/set_digital_io', RapidSetDigitalIO)
+	self.armcontroller=arm_controller_commander.ARMControllerCommander()
+    	self.pose_targets=[]
     
 
-    def camera_init(self):
+    def camera_read(self):
 	self.P,self.Q=CameraService()
 
     def moveit_init(self):
-	moveit_commander.roscpp_initialize(sys.argv)
-	rospy.init_node('collision_checker','move_group_python_interface_tutorial',
-                  anonymous=True)
-
-  ## MoveIt! Initialization
-	robot = moveit_commander.RobotCommander()
-	scene = moveit_commander.PlanningSceneInterface()
-        group = moveit_commander.MoveGroupCommander("move_group")
-        group.set_goal_position_tolerance(0.04)
-        group.allow_replanning(True)
-        group.set_planner_id("RRTConnectkConfigDefault") #RRTConnectkConfigDefault/SBLkConfigDefault/KPIECEkConfigDefault/BKPIECEkConfigDefault/LBKPIECEkConfigDefault/
-        group.set_num_planning_attempts(5)
-        display_trajectory_publisher = rospy.Publisher(
-                                      '/move_group/display_planned_path',
-                                      moveit_msgs.msg.DisplayTrajectory)
-	self.group=group
+	
+	self.group=self.armcontroller.move_it_init()
 
     #ROS service calls to check system variables
     def generate_plans(self):
@@ -92,8 +68,9 @@ class VisionMoveIt:
 		dt = toc - tic
 
 	print 'Start'
+	self.armcontroller.set_controller(4,1,ft_threshold)
     	print "============ Printing robot Pose"
-	print group.get_current_pose()  
+	print group.get_current_pose()
 	#print robot.get_current_state().joint_state.position
 	print "============ Generating plan 1"
 	pose_target = geometry_msgs.msg.Pose()
@@ -104,34 +81,84 @@ class VisionMoveIt:
 	pose_target.position.x = P[0][0]
 	pose_target.position.y = P[0][1]#-2.02630600362
 	pose_target.position.z = P[0][2] + 0.3
-	self.pose_target=pose_target
+	self.pose_targets[0]=pose_target
 	#self.group.set_pose_target(pose_target)
 	
 
-	print "============ Printing robot Pose"
-	print group.get_current_pose()  
-	print "============ Generating plan 2"
+	#print "============ Printing robot Pose"
+	#print group.get_current_pose()  
+	#print "============ Generating plan 2"
 	pose_target2 = copy.deepcopy(pose_target)
         pose_target2.position.z -= 0.45
-	self.pose_target2=pose_target2
-	
+	self.pose_targets[1]=pose_target2
+	#print "============ Generating plan 3"
+	pose_target3 = copy.deepcopy(pose_target)
+        pose_target3.position.z += 0.25
+	self.pose_targets[2]=pose_target3
 
-
-    req=SetControllerModeRequest()
-    req.mode.mode=4
-    req.speed_scalar=1
-    req.force_torque_stop_threshold=ft_threshold
+if __name__ == '__main__':
+    new=VisionMoveIt()
+    new.camera_read()
+    new.moveit_init()
+    new.generate_plans()
+    Robot_Pos = []
+    Robot_Joint = []
     
-    res=set_controller_mode(req)
-    if (not res.success): raise Exception("Could not set controller mode")
+    '''
+    #Code to automatically add in scene object
+    
+    scene_pose=geometry_msgs.msg.PoseStamped()
+    scene_pose.header.frame_id = "testbed"
+    scene_pose.pose.orientation.z=-1.57
+    scene_pose.pose.position.x=3.6
+    scene_pose.pose.position.y=3.3
+    scene_pose.pose.position.z=0
+    scene_name="testbed"
+    scene.add_mesh(scene_name,scene_pose,'./meshes/testbed_walls/testbed_walls.stl',size=(1,1,1))
+
+    box_pose = geometry_msgs.msg.PoseStamped()
+    box_pose.header.frame_id = "panda_leftfinger"
+    box_pose.pose.orientation.w = 1.0
+    box_name = "box"
+    scene.add_box(box_name, box_pose, size=(1, 1, 1))
+
+
+    start = rospy.get_time()
+    seconds = rospy.get_time()
+    while (seconds - start < 10) and not rospy.is_shutdown():
+  # Test if the box is in attached objects
+	attached_objects = scene.get_attached_objects([scene_name])
+	is_attached = len(attached_objects.keys()) > 0
+
+  # Test if the box is in the scene.
+  # Note that attaching the box will remove it from known_objects
+	is_known = scene_name in scene.get_known_object_names()
+
+  # Test if we are in the expected state
+	if (is_attached):
+	    break
+
+  # Sleep so that we give other threads time on the processor
+	rospy.sleep(0.1)
+	seconds = rospy.get_time()
+    '''
+
+    
+   
         
-    #rospy.sleep(2)
+    rospy.sleep(2)
 
-    
+    print "============ Printing robot Pose"
+    print group.get_current_pose().pose
 
             
 
-    
+    tic = timeit.default_timer()
+    dt = 0
+    while dt< 3:
+        toc = timeit.default_timer()
+        dt = toc - tic
+    print 'Start'
        
 	
     if (1):
@@ -163,7 +190,7 @@ class VisionMoveIt:
 
         group.set_pose_target(pose_target)
         '''
-        print 'Target:',pose_target
+        print 'Target 1:',pose_target
 
   ## Now, we call the planner to compute the plan
   ## and visualize it if successful
@@ -171,7 +198,7 @@ class VisionMoveIt:
   ## to actually move the robot
         
         plan1 = group.plan()
-        print plan1
+        #print plan1
         cnt = 0
         while( (not plan1.joint_trajectory.points) and (cnt<3)):
             print "============ Generating plan 1"
@@ -184,16 +211,12 @@ class VisionMoveIt:
         print 'Execution Finished.'
         
         ########## Vertical Path ############
-
-        req=SetControllerModeRequest()
-        req.mode.mode=4
-        req.speed_scalar=0.4
-        req.force_torque_stop_threshold=ft_threshold
+	armcontroller.set_controller(4,0.4,ft_threshold)
         
-        res=set_controller_mode(req)
-        if (not res.success): raise Exception("Could not set controller mode")
 
-        
+        print "============ Printing robot Pose"
+        print group.get_current_pose()  
+        print "============ Generating plan 2"
         """pose_target = geometry_msgs.msg.Pose()
         pose_target.orientation.x = Q[1]
         pose_target.orientation.y = Q[2]#0.707
@@ -203,11 +226,12 @@ class VisionMoveIt:
         pose_target.position.y = P[0][1]#-2.02630600362
         pose_target.position.z = P[0][2] + 0.2"""
 
-      
+        pose_target2 = copy.deepcopy(pose_target)
+        pose_target2.position.z -= 0.45
 
         group.set_pose_target(pose_target2)
         
-        print 'Target:',pose_target2
+        print 'Target 2:',pose_target2
 
   ## Now, we call the planner to compute the plan
   ## and visualize it if successful
@@ -225,22 +249,14 @@ class VisionMoveIt:
         print "============ Executing plan2"
         group.execute(plan2)
         print 'Execution Finished.'
-
-        req=SetControllerModeRequest()
-        req.mode.mode=4
-        req.speed_scalar=0.7
-        req.force_torque_stop_threshold=[]
+	armcontroller.set_controller(4,0.7,ft_threshold)
         
-        res=set_controller_mode(req)
-        if (not res.success): raise Exception("Could not set controller mode")
 
         print "============ Lift panel!"
+        armcontroller.set_vacuum(1)
         
-        req=RapidSetDigitalIORequest()
-        req.signal="Vacuum_enable"
-        req.lvalue=1
-        set_digital_io(req)
         
+        rospy.sleep(1)
         pose_target3 = copy.deepcopy(pose_target)
         pose_target3.position.z += 0.25
 
@@ -255,6 +271,7 @@ class VisionMoveIt:
         
         plan3 = group.plan()
         cnt = 0
+	#raw_input("Press Enter to continue")  
         while( (not plan3.joint_trajectory.points) and (cnt<3)):
             print "============ Generating plan 3"
             plan3 = group.plan()
