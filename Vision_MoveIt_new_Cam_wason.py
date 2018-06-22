@@ -118,7 +118,7 @@ if __name__ == '__main__':
     
     req=SetControllerModeRequest()
     req.mode.mode=4
-    req.speed_scalar=1
+    req.speed_scalar=0.7
     req.force_torque_stop_threshold=ft_threshold
     
     res=set_controller_mode(req)
@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
         req=SetControllerModeRequest()
         req.mode.mode=4
-        req.speed_scalar=0.4
+        req.speed_scalar=0.25
         req.force_torque_stop_threshold=ft_threshold
         
         res=set_controller_mode(req)
@@ -236,7 +236,7 @@ if __name__ == '__main__':
 
         req=SetControllerModeRequest()
         req.mode.mode=4
-        req.speed_scalar=0.7
+        req.speed_scalar=0.5
         req.force_torque_stop_threshold=[]
         
         res=set_controller_mode(req)

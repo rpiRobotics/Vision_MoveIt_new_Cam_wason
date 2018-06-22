@@ -137,7 +137,7 @@ if __name__ == '__main__':
         group.set_pose_target(pose_target)
         '''
         print 'Target 1:',pose_target
-
+        
   ## Now, we call the planner to compute the plan
   ## and visualize it if successful
   ## Note that we are just planning, not asking move_group 
@@ -157,7 +157,7 @@ if __name__ == '__main__':
         print 'Execution Finished.'
         
         ########## Vertical Path ############
-	armcontroller.set_controller(4,0.4,ft_threshold)
+        armcontroller.set_controller(4,0.2,ft_threshold)
         
 
         print "============ Printing robot Pose"
@@ -171,64 +171,66 @@ if __name__ == '__main__':
         pose_target.position.x = P[0][0]
         pose_target.position.y = P[0][1]#-2.02630600362
         pose_target.position.z = P[0][2] + 0.2"""
-
+        
         pose_target2 = copy.deepcopy(pose_target)
         pose_target2.position.z -= 0.45
-
+        
         group.set_pose_target(pose_target2)
         
         print 'Target 2:',pose_target2
-
+        
   ## Now, we call the planner to compute the plan
   ## and visualize it if successful
   ## Note that we are just planning, not asking move_group 
   ## to actually move the robot
-        
+        time.sleep(3)
         plan2 = group.plan()
+	print "Planned"
         cnt = 0
         while( (not plan2.joint_trajectory.points) and (cnt<3)):
             print "============ Generating plan 2"
             plan2 = group.plan()
             cnt = cnt+1
             
-        time.sleep(1)    
+        time.sleep(3)    
         print "============ Executing plan2"
         group.execute(plan2)
         print 'Execution Finished.'
-	armcontroller.set_controller(4,0.7,ft_threshold)
+        armcontroller.set_controller(4,0.4,[])
         
-
+        
         print "============ Lift panel!"
         armcontroller.set_vacuum(1)
         
-        
-        rospy.sleep(1)
+        print group.get_current_pose() 
+        #rospy.sleep(3)
         pose_target3 = copy.deepcopy(pose_target)
         pose_target3.position.z += 0.25
-
+         
         group.set_pose_target(pose_target3)
-        
+       
         print 'Target:',pose_target3
-
+        
   ## Now, we call the planner to compute the plan
   ## and visualize it if successful
   ## Note that we are just planning, not asking move_group 
   ## to actually move the robot
-        
+        #time.sleep(3)
         plan3 = group.plan()
+        print "Planned"
         cnt = 0
-	#raw_input("Press Enter to continue")  
+        #raw_input("Press Enter to continue")  
         while( (not plan3.joint_trajectory.points) and (cnt<3)):
             print "============ Generating plan 3"
             plan3 = group.plan()
             cnt = cnt+1
-            
+        print "post loop"
         time.sleep(1)    
         print "============ Executing plan3"
         group.execute(plan3)
         print 'Execution Finished.'
-
-
+        
+        
         '''
         tic = timeit.default_timer()
         dt = 0

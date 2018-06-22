@@ -27,10 +27,10 @@ from CameraService import *
 
 if __name__ == '__main__':
     print "============ Starting setup"
-    Force_Measurement = 0
-    P,Q = CameraService()
+    Force_Measurement = 1
+    #P,Q = CameraService()
 
-    '''
+    
     if(Force_Measurement):
         if (len(sys.argv) < 2):
             raise Exception('IP address of ATI Net F/T sensor required')
@@ -40,9 +40,9 @@ if __name__ == '__main__':
         print netft.try_read_ft_http()
 
         netft.start_streaming()
-        FTtime = []
-        FTread = []
-    '''
+        FTtime = timeit.default_timer()
+        FTread = netft.try_read_ft_streaming(.1)[1]
+    
     Robot_Pos = []
     Robot_Joint = []
     moveit_commander.roscpp_initialize(sys.argv)
@@ -63,10 +63,31 @@ if __name__ == '__main__':
     rospy.sleep(2)
 
     print "============ Printing robot Pose"
-    print group.get_current_pose().pose
+    Pose = group.get_current_pose().pose
+    Joint = robot.get_current_state().joint_state.position
+    FTread = netft.try_read_ft_streaming(.1)[1]
 
-            
+    print Joint
+    print Pose
+    print FTtime
+    print FTread
 
+    f_handle = file('YC_FTread.txt', 'a')
+    np.savetxt(f_handle, FTread)
+    f_handle.close()        
+
+    f_handle = file('YC_Joint.txt', 'a')
+    np.savetxt(f_handle, Joint)
+    f_handle.close() 
+
+    f_handle = file('YC_Position.txt', 'a')
+    np.savetxt(f_handle, np.array([Pose.position.x, Pose.position.y, Pose.position.z]))
+    f_handle.close() 
+
+    f_handle = file('YC_Orientation.txt', 'a')
+    np.savetxt(f_handle, np.array([Pose.orientation.x, Pose.orientation.y, Pose.orientation.z, Pose.orientation.w]))
+    f_handle.close() 
+    '''
     tic = timeit.default_timer()
     dt = 0
     while dt< 3:
@@ -74,7 +95,7 @@ if __name__ == '__main__':
         dt = toc - tic
     print 'Start'
        
-
+    
     if (1):
         print "============ Printing robot Pose"
         print group.get_current_pose()  
@@ -109,4 +130,5 @@ if __name__ == '__main__':
         print "============ Executing plan1"
         group.execute(plan1)
         print 'Execution Finished.'
+    '''
         
